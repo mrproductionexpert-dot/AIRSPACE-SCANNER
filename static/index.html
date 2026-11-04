@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wi-Fi Airspace Scanner — Camera & Drone Detector</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>AIRSPACE SCANNER</h1>
+        <p>Hidden Wi-Fi camera &amp; drone detector · WNP-UA1300-02 ready</p>
+      </div>
+      <div class="controls">
+        <label class="field">
+          Adapter
+          <select id="adapterSelect"></select>
+        </label>
+        <label class="toggle" title="Synthetic cameras & drones — no hardware required">
+          <input type="checkbox" id="simToggle" />
+          Simulation
+        </label>
+        <button id="btnStart" type="button">Start Scan</button>
+        <button id="btnStop" class="danger" type="button">Stop</button>
+        <button id="btnOnce" class="ghost" type="button">Scan Once</button>
+        <button id="btnUnlock" class="ghost" type="button">Unlock Target</button>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat"><div class="label">Devices</div><div class="value" id="statDevices">0</div></div>
+      <div class="stat"><div class="label">Threats</div><div class="value" id="statThreats">0</div></div>
+      <div class="stat"><div class="label">Drones</div><div class="value" id="statDrones">0</div></div>
+      <div class="stat"><div class="label">Cameras</div><div class="value" id="statCameras">0</div></div>
+    </section>
+
+    <main class="layout">
+      <section class="panel">
+        <h2>Polar Airspace Radar</h2>
+        <div class="radar-wrap">
+          <canvas id="radar" width="720" height="720"></canvas>
+        </div>
+        <div class="legend">
+          <span class="drone">Drone</span>
+          <span class="camera">Hidden / IP Camera</span>
+          <span class="iot">IoT Camera Module</span>
+          <span class="ap">Standard AP</span>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="panel">
+          <h2>Geiger Proximity Lock</h2>
+          <div id="lockInfo" class="meta" style="color:var(--muted);font-size:0.85rem;margin-bottom:8px;">
+            Click a blip or device to lock. Walk with the USB adapter — clicks speed up as you get closer.
+          </div>
+          <div class="geiger">
+            <div class="geiger-meter"><i id="geigerBar"></i></div>
+            <div class="geiger-readout" id="geigerReadout">— dBm</div>
+          </div>
+          <label class="toggle" style="margin-top:10px;">
+            <input type="checkbox" id="audioToggle" checked />
+            Geiger audio
+          </label>
+        </section>
+
+        <section class="panel">
+          <h2>Signal Waterfall (locked / strongest threat)</h2>
+          <canvas id="waterfall" width="640" height="120"></canvas>
+        </section>
+
+        <section class="panel" style="flex:1;">
+          <h2>Detected Transmitters</h2>
+          <div class="device-list" id="deviceList"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="status-bar">
+      <span id="statusScan">Idle</span>
+      <span id="statusAdapter">No adapter</span>
+      <span id="statusScanCount">Scans: 0</span>
+      <a href="ms-settings:privacy-location" id="locationLink" style="color:var(--accent2);display:none;">Open Location Settings</a>
+      <span id="statusError" class="err"></span>
+    </footer>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
