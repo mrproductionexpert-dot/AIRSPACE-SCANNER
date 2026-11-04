@@ -281,6 +281,10 @@
     locLink.style.display = needsLoc ? "inline" : "none";
 
     $("simToggle").checked = !!data.simulation;
+    if (data.scan_interval) {
+      const intervalSel = $("intervalSelect");
+      intervalSel.value = String(Math.round(data.scan_interval));
+    }
 
     // Adapter select
     const sel = $("adapterSelect");
@@ -397,6 +401,13 @@
         body: JSON.stringify({ enabled: e.target.checked }),
       })
     );
+  });
+  $("intervalSelect").addEventListener("change", async (e) => {
+    const seconds = Number(e.target.value);
+    await api("/api/interval", {
+      method: "POST",
+      body: JSON.stringify({ seconds }),
+    });
   });
   $("adapterSelect").addEventListener("change", async (e) => {
     applySnapshot(

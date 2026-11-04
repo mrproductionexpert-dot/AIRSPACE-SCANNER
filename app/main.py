@@ -59,6 +59,7 @@ class AppState:
             "last_error": self.last_error,
             "last_scan_at": self.last_scan_at,
             "scan_count": self.scan_count,
+            "scan_interval": self.scan_interval,
             "stats": {
                 "device_count": len(devices),
                 "threat_count": len(threats),
@@ -180,7 +181,7 @@ class LockBody(BaseModel):
 
 
 class ScanIntervalBody(BaseModel):
-    seconds: float = Field(ge=0.8, le=15.0, default=2.0)
+    seconds: float = Field(ge=1.0, le=60.0, default=2.0)
 
 
 @app.get("/")
