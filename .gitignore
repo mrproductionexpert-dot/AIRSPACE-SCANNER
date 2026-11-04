@@ -1,7 +1,9 @@
 # Local system Python venv (portable runtime is committed under runtime/python)
 .venv/
+.venv-linux/
 venv/
 env/
+.pyuser/
 
 # Caches / bytecode (do NOT ignore *.pyd — those are required CPython extensions)
 __pycache__/

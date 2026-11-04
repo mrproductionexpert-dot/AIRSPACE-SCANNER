@@ -38,8 +38,8 @@ Linux support is available via `nmcli` (NetworkManager).
 
 Requirements:
 - Python 3.10+
-- `python3-venv` package
 - NetworkManager / `nmcli` (`network-manager` package)
+- Optional: `python3-venv` (recommended, but not required)
 
 Ubuntu / Mint:
 
@@ -48,7 +48,7 @@ sudo apt update
 sudo apt install -y python3 python3-venv network-manager
 ```
 
-Start:
+Start (terminal mode):
 
 ```bash
 git clone https://github.com/mrproductionexpert-dot/AIRSPACE-SCANNER.git
@@ -58,6 +58,26 @@ chmod +x run.sh
 ```
 
 Open **http://127.0.0.1:8765**
+
+If your live session says `python3-venv` is missing, `run.sh` now falls back to a project-local Python user base (`.pyuser`) and still runs without sudo.
+
+### Linux GUI launch (no terminal window)
+
+One-time launcher install:
+
+```bash
+chmod +x scripts/install_linux_launcher.sh run.sh run-linux-gui.sh
+./scripts/install_linux_launcher.sh
+```
+
+Then open app menu and run **AIRSPACE Scanner**.
+
+Direct GUI start without installing menu entry:
+
+```bash
+chmod +x run-linux-gui.sh
+./run-linux-gui.sh
+```
 
 1. Select your USB Wi-Fi adapter in the dropdown (Realtek / WNP-UA1300-style adapters are auto-preferred when detected).
 2. Or enable **Simulation** to demo drones / V380 / ESP-CAM / Hikvision-style blips immediately.
@@ -80,7 +100,9 @@ app/                Scanner backend
 static/             Radar UI, Geiger audio, waterfall
 scripts/            Smoke test + portable Python rebuild script
 run.bat             One-click launcher (uses bundled Python)
-run.sh              Linux launcher (venv + deps install)
+run.sh              Linux launcher (venv or no-sudo fallback)
+run-linux-gui.sh    Linux GUI/background launcher (opens browser)
+scripts/install_linux_launcher.sh  Installs .desktop app launcher
 requirements.txt    Python dependencies
 ```
 
