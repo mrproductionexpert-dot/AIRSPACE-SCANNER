@@ -1,8 +1,10 @@
-"""Windows Native Wi-Fi BSS scanner via wlanapi.dll (ctypes).
+"""Wi-Fi BSS scanner backend.
 
 Enumerates adapters (including Gembird WNP-UA1300-02 / RTL8812BU),
 triggers WlanScan, and returns BSSID / SSID / RSSI / channel / frequency.
-Falls back to netsh parsing when the native API is unavailable.
+Uses:
+- Windows: wlanapi.dll, with netsh fallback
+- Linux: nmcli (NetworkManager), with iw fallback
 """
 
 from __future__ import annotations
@@ -176,6 +178,11 @@ PREFERRED_ADAPTER_HINTS = (
     "802.11ac",
     "usb",
 )
+
+
+def _signal_pct_to_rssi(signal_pct: int) -> int:
+    """Approximate RSSI from quality percentage."""
+    return -100 + int(max(0, min(100, signal_pct)) * 0.7)
 
 
 def _freq_khz_to_channel(freq_khz: int) -> tuple[int, str]:
@@ -492,7 +499,7 @@ def _netsh_scan(adapter_name: Optional[str] = None) -> list[BssEntry]:
         if not bssid:
             return
         # netsh signal is percent; approximate RSSI
-        rssi = -100 + int(signal * 0.7)
+        rssi = _signal_pct_to_rssi(signal)
         band = "2.4"
         freq = 2412
         if channel >= 36:
@@ -542,6 +549,140 @@ def _netsh_scan(adapter_name: Optional[str] = None) -> list[BssEntry]:
     return networks
 
 
+def _split_nmcli_escaped(line: str) -> list[str]:
+    """Split a colon-separated nmcli terse line while honoring escaped colons."""
+    parts: list[str] = []
+    cur: list[str] = []
+    esc = False
+    for ch in line:
+        if esc:
+            cur.append(ch)
+            esc = False
+            continue
+        if ch == "\\":
+            esc = True
+            continue
+        if ch == ":":
+            parts.append("".join(cur))
+            cur = []
+            continue
+        cur.append(ch)
+    parts.append("".join(cur))
+    return parts
+
+
+def _linux_list_interfaces() -> list[AdapterInfo]:
+    """List Wi-Fi interfaces via NetworkManager."""
+    try:
+        out = subprocess.check_output(
+            ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE", "device"],
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+    except Exception:
+        return []
+    adapters: list[AdapterInfo] = []
+    for raw in out.splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        parts = _split_nmcli_escaped(raw)
+        if len(parts) < 3:
+            continue
+        dev, dev_type, state = parts[0], parts[1].lower(), parts[2].lower()
+        if dev_type != "wifi":
+            continue
+        preferred = any(h in dev.lower() for h in PREFERRED_ADAPTER_HINTS) or dev.startswith(
+            "wl"
+        )
+        state_num = 1 if state in ("connected", "disconnected", "connecting") else 0
+        adapters.append(
+            AdapterInfo(
+                guid=dev,
+                description=f"Linux Wi-Fi ({dev})",
+                state=state_num,
+                preferred=preferred,
+            )
+        )
+    adapters.sort(key=lambda a: (not a.preferred, a.description.lower()))
+    return adapters
+
+
+def _linux_scan_nmcli(interface_name: Optional[str] = None) -> list[BssEntry]:
+    """Scan Wi-Fi networks via nmcli."""
+    cmd = [
+        "nmcli",
+        "-t",
+        "-f",
+        "BSSID,SSID,SIGNAL,CHAN,FREQ,RATE,SECURITY",
+        "device",
+        "wifi",
+        "list",
+        "--rescan",
+        "yes",
+    ]
+    if interface_name:
+        cmd += ["ifname", interface_name]
+    proc = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if proc.returncode != 0:
+        blob = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        raise OSError(f"nmcli scan failed ({proc.returncode}): {blob.strip()[:300]}")
+
+    networks: list[BssEntry] = []
+    for raw in (proc.stdout or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        parts = _split_nmcli_escaped(line)
+        if len(parts) < 7:
+            continue
+        bssid = parts[0].upper()
+        ssid = parts[1]
+        try:
+            signal = int(parts[2] or "0")
+        except ValueError:
+            signal = 0
+        try:
+            channel = int(parts[3] or "0")
+        except ValueError:
+            channel = 0
+        try:
+            freq_mhz = int(parts[4] or "0")
+        except ValueError:
+            freq_mhz = 0
+        freq_khz = freq_mhz * 1000 if freq_mhz > 0 else 0
+        if channel <= 0 and freq_khz > 0:
+            channel, band = _freq_khz_to_channel(freq_khz)
+        else:
+            _ch, band = _freq_khz_to_channel(freq_khz) if freq_khz > 0 else (channel, "unknown")
+        security = parts[6].lower()
+        phy_type = "open" if security in ("", "--") else "secured"
+        networks.append(
+            BssEntry(
+                bssid=bssid,
+                ssid=ssid,
+                rssi=_signal_pct_to_rssi(signal),
+                link_quality=signal,
+                frequency_khz=freq_khz,
+                channel=channel,
+                band=band,
+                phy_type=phy_type,
+                capability=0,
+                beacon_period=0,
+                source="nmcli",
+            )
+        )
+    return networks
+
+
 class WifiScanner:
     """High-level scanner with hot-plug aware adapter selection."""
 
@@ -549,6 +690,7 @@ class WifiScanner:
         self._api: Optional[WlanApi] = None
         self._selected_guid: Optional[str] = None
         self._use_netsh = False
+        self._linux_mode = sys.platform.startswith("linux")
         if sys.platform == "win32":
             try:
                 self._api = WlanApi()
@@ -564,6 +706,8 @@ class WifiScanner:
             self._api.close()
 
     def list_adapters(self) -> list[AdapterInfo]:
+        if self._linux_mode:
+            return _linux_list_interfaces()
         if self._api and not self._use_netsh:
             try:
                 return self._api.list_adapters()
@@ -612,7 +756,9 @@ class WifiScanner:
                 error="No Wi-Fi adapter found. Plug in WNP-UA1300-02 or enable Simulation Mode.",
             )
         try:
-            if self._api and not self._use_netsh:
+            if self._linux_mode:
+                nets = _linux_scan_nmcli(adapter.guid)
+            elif self._api and not self._use_netsh:
                 nets = self._api.scan(adapter.guid, settle_seconds=settle_seconds)
             else:
                 nets = _netsh_scan(adapter.description)
@@ -637,12 +783,12 @@ class WifiScanner:
             )
         except Exception as exc:
             try:
-                nets = _netsh_scan(adapter.description)
+                nets = _linux_scan_nmcli(adapter.guid) if self._linux_mode else _netsh_scan(adapter.description)
                 return ScanResult(
                     adapter=adapter,
                     networks=nets,
                     scanned_at=now,
-                    error=f"wlanapi error (used netsh): {exc}",
+                    error=f"scan backend error (used fallback): {exc}",
                 )
             except PermissionError as exc2:
                 return ScanResult(
