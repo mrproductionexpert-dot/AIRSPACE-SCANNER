@@ -59,7 +59,8 @@ chmod +x run.sh
 
 Open **http://127.0.0.1:8765**
 
-If your live session says `python3-venv` is missing, `run.sh` now falls back to a project-local Python user base (`.pyuser`) and still runs without sudo.
+If your live session says `python3-venv` is missing, `run.sh` now falls back to a project-local Python user base (`.pyuser`) and still runs without sudo.  
+If `pip` is missing, launcher auto-bootstraps it (via `ensurepip` or `get-pip.py`) before installing dependencies.
 
 ### Linux GUI launch (no terminal window)
 

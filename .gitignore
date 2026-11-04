@@ -4,6 +4,7 @@
 venv/
 env/
 .pyuser/
+.cache/
 
 # Caches / bytecode (do NOT ignore *.pyd — those are required CPython extensions)
 __pycache__/

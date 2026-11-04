@@ -21,6 +21,44 @@ if ! command -v nmcli >/dev/null 2>&1; then
 fi
 
 mkdir -p "$ROOT_DIR/logs"
+mkdir -p "$ROOT_DIR/.cache"
+
+download_get_pip() {
+  local target="$1"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "https://bootstrap.pypa.io/get-pip.py" -o "$target" && return 0
+  fi
+  if command -v wget >/dev/null 2>&1; then
+    wget -q "https://bootstrap.pypa.io/get-pip.py" -O "$target" && return 0
+  fi
+  python3 - <<PY
+import urllib.request
+urllib.request.urlretrieve("https://bootstrap.pypa.io/get-pip.py", r"$target")
+PY
+}
+
+ensure_pip() {
+  local py="$1"
+  local install_mode="$2" # "venv" or "user"
+
+  if "$py" -m pip --version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  "$py" -m ensurepip --upgrade >/dev/null 2>&1 || true
+  if "$py" -m pip --version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local gp="$ROOT_DIR/.cache/get-pip.py"
+  download_get_pip "$gp"
+  if [[ "$install_mode" == "user" ]]; then
+    "$py" "$gp" --user >/dev/null
+  else
+    "$py" "$gp" >/dev/null
+  fi
+  "$py" -m pip --version >/dev/null 2>&1
+}
 
 check_health() {
   python3 - <<'PY' >/dev/null 2>&1
@@ -48,6 +86,11 @@ if python3 -c "import venv" >/dev/null 2>&1; then
     python3 -m venv .venv-linux
   fi
   PY_CMD=( ".venv-linux/bin/python" )
+  if ! ensure_pip "${PY_CMD[0]}" "venv"; then
+    echo "Failed to bootstrap pip inside .venv-linux."
+    echo "Try: sudo apt install python3-venv python3-pip"
+    exit 1
+  fi
   "${PY_CMD[@]}" -m pip install --upgrade pip >/dev/null
   "${PY_CMD[@]}" -m pip install -r requirements.txt
 else
@@ -55,7 +98,11 @@ else
   export PYTHONUSERBASE="$ROOT_DIR/.pyuser"
   export PYTHONPATH="$ROOT_DIR${PYTHONPATH:+:$PYTHONPATH}"
   mkdir -p "$PYTHONUSERBASE"
-  python3 -m ensurepip --user >/dev/null 2>&1 || true
+  if ! ensure_pip "python3" "user"; then
+    echo "Failed to bootstrap pip for user install mode."
+    echo "Install one of these packages if possible: python3-pip or python3-venv"
+    exit 1
+  fi
   python3 -m pip install --user --upgrade pip >/dev/null
   python3 -m pip install --user -r requirements.txt
   export PATH="$PYTHONUSERBASE/bin:$PATH"
