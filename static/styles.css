@@ -52,6 +52,7 @@ body {
   align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 18px;
+  position: relative;
 }
 
 .brand h1 {
@@ -120,6 +121,45 @@ button.danger {
 
 button.ghost {
   background: transparent;
+}
+
+button.help-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.help-panel {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(560px, 95vw);
+  z-index: 20;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(7, 20, 28, 0.96);
+  box-shadow: var(--glow);
+  backdrop-filter: blur(8px);
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.help-panel.open {
+  display: grid;
+  gap: 8px;
+}
+
+.help-panel h3 {
+  margin: 0 0 4px;
+  color: var(--accent2);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 button.active {

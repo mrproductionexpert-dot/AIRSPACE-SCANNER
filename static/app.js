@@ -422,6 +422,20 @@
     if (state.audioEnabled) ensureAudio();
   });
 
+  const helpBtn = $("btnHelp");
+  const helpPanel = $("helpPanel");
+  helpBtn.addEventListener("click", () => {
+    const opening = !helpPanel.classList.contains("open");
+    helpPanel.classList.toggle("open", opening);
+    helpPanel.setAttribute("aria-hidden", opening ? "false" : "true");
+  });
+  document.addEventListener("click", (ev) => {
+    if (!helpPanel.classList.contains("open")) return;
+    if (helpPanel.contains(ev.target) || helpBtn.contains(ev.target)) return;
+    helpPanel.classList.remove("open");
+    helpPanel.setAttribute("aria-hidden", "true");
+  });
+
   // WebSocket live feed
   function connectWs() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
