@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -38,6 +39,10 @@ class AppState:
         self.last_error: Optional[str] = None
         self.last_scan_at: float = 0.0
         self.scan_count: int = 0
+        self.last_client_left_at: Optional[float] = None
+        self.auto_shutdown_seconds: float = 20.0
+        self._idle_task: Optional[asyncio.Task] = None
+        self.last_ui_activity_at: float = time.time()
 
     def snapshot(self) -> dict[str, Any]:
         devices = [d.to_dict() for d in self.tracker.devices()]
@@ -139,6 +144,25 @@ async def scan_loop() -> None:
         await asyncio.sleep(state.scan_interval)
 
 
+async def idle_shutdown_loop() -> None:
+    """Auto-stop the hidden background process after all UI clients disconnect."""
+    while True:
+        await asyncio.sleep(2.0)
+        # Keep alive while there is active UI heartbeat traffic.
+        if time.time() - state.last_ui_activity_at < state.auto_shutdown_seconds:
+            continue
+        state.scanning = False
+        if state._task:
+            state._task.cancel()
+            try:
+                await state._task
+            except Exception:
+                pass
+            state._task = None
+        # Process is launched in hidden/background mode. Exit cleanly when UI is closed.
+        os._exit(0)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Auto-select preferred USB adapter if present
@@ -146,12 +170,19 @@ async def lifespan(app: FastAPI):
         state.scanner.select_adapter()
     except Exception:
         pass
+    state._idle_task = asyncio.create_task(idle_shutdown_loop())
     yield
     state.scanning = False
     if state._task:
         state._task.cancel()
         try:
             await state._task
+        except Exception:
+            pass
+    if state._idle_task:
+        state._idle_task.cancel()
+        try:
+            await state._idle_task
         except Exception:
             pass
     state.scanner.close()
@@ -182,6 +213,10 @@ class LockBody(BaseModel):
 
 class ScanIntervalBody(BaseModel):
     seconds: float = Field(ge=1.0, le=60.0, default=2.0)
+
+
+class PingBody(BaseModel):
+    t: Optional[float] = None
 
 
 @app.get("/")
@@ -222,8 +257,8 @@ async def select_adapter(body: SelectAdapterBody) -> dict[str, Any]:
 @app.post("/api/simulation")
 async def set_simulation(body: SimulationBody) -> dict[str, Any]:
     state.simulation = body.enabled
-    if body.enabled:
-        state.tracker.reset()
+    # Always reset so fake/demo entries disappear immediately when toggled off.
+    state.tracker.reset()
     return state.snapshot()
 
 
@@ -267,10 +302,17 @@ async def set_interval(body: ScanIntervalBody) -> dict[str, Any]:
     return {"ok": True, "seconds": state.scan_interval}
 
 
+@app.post("/api/ping")
+async def ping(body: PingBody) -> dict[str, Any]:
+    state.last_ui_activity_at = time.time()
+    return {"ok": True}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     state._clients.add(ws)
+    state.last_client_left_at = None
     try:
         await ws.send_text(json.dumps({"type": "telemetry", "data": state.snapshot()}))
         while True:
@@ -282,17 +324,22 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                 continue
             cmd = payload.get("cmd")
             if cmd == "ping":
+                state.last_ui_activity_at = time.time()
                 await ws.send_text(json.dumps({"type": "pong", "t": time.time()}))
             elif cmd == "lock":
+                state.last_ui_activity_at = time.time()
                 state.locked_bssid = (payload.get("bssid") or "").upper() or None
                 await broadcast({"type": "telemetry", "data": state.snapshot()})
             elif cmd == "unlock":
+                state.last_ui_activity_at = time.time()
                 state.locked_bssid = None
                 await broadcast({"type": "telemetry", "data": state.snapshot()})
     except WebSocketDisconnect:
         pass
     finally:
         state._clients.discard(ws)
+        if not state._clients:
+            state.last_client_left_at = time.time()
 
 
 def main() -> None:

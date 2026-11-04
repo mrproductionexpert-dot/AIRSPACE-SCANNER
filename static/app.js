@@ -451,6 +451,14 @@
     ws.onclose = () => setTimeout(connectWs, 1500);
   }
 
+  // UI heartbeat: keeps server alive only while a page is open.
+  setInterval(() => {
+    api("/api/ping", {
+      method: "POST",
+      body: JSON.stringify({ t: Date.now() }),
+    }).catch(() => {});
+  }, 5000);
+
   // Animation loop for sweep + geiger when locked
   function tick() {
     if (state.data) {
