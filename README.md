@@ -1,6 +1,6 @@
 # AIRSPACE SCANNER
 
-**Hidden Wi-Fi Camera & Drone Detector (Windows Native)**
+**Hidden Wi-Fi Camera & Drone Detector (Windows Native, FULLY Portable)**
 
 Portable Windows app that scans 2.4 GHz and 5 / 5.8 GHz Wi-Fi airspace, classifies spy cameras and drones by MAC OUI + SSID + channel signatures, probes LAN camera ports, and helps you hunt targets with a live polar radar + acoustic Geiger counter.
 
