@@ -30,7 +30,7 @@ run.bat
 
 Or copy the whole folder (including `runtime\`) to a USB flash drive, plug it into any **64-bit Windows** PC, and double-click `run.bat`.
 
-`run.bat` uses `runtime\python\python.exe` (bundled), checks dependencies, starts the server, and opens the UI at **http://127.0.0.1:8765**.
+`run.bat` calls `run.ps1`, which uses `runtime\python\python.exe` (bundled), checks dependencies, and starts the server at **http://127.0.0.1:8765**.
 
 1. Select your USB Wi-Fi adapter in the dropdown (Realtek / WNP-UA1300-style adapters are auto-preferred when detected).
 2. Or enable **Simulation** to demo drones / V380 / ESP-CAM / Hikvision-style blips immediately.

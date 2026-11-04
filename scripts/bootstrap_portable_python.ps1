@@ -18,6 +18,7 @@ $pth = Get-ChildItem $pyDir -Filter 'python*._pth' | Select-Object -First 1
 @"
 python312.zip
 .
+..\..
 Lib\site-packages
 import site
 "@ | Set-Content -Path $pth.FullName -Encoding ASCII
