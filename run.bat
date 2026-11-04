@@ -19,10 +19,11 @@ if errorlevel 1 (
   exit /b 1
 )
 
-REM Ensure dependencies are present (no-op if already installed)
-"%PORTABLE_PY%" -m pip install --no-warn-script-location -r "%~dp0requirements.txt"
+REM Do not depend on pip at runtime. Just verify required modules exist.
+"%PORTABLE_PY%" -c "import fastapi,uvicorn,psutil,pydantic; print('runtime dependencies: OK')"
 if errorlevel 1 (
-  echo Dependency install/check failed.
+  echo Portable runtime is incomplete (missing Python modules).
+  echo Please re-download or git pull the latest repository contents.
   pause
   exit /b 1
 )
