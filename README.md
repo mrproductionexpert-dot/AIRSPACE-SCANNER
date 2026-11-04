@@ -32,53 +32,39 @@ Or copy the whole folder (including `runtime\`) to a USB flash drive, plug it in
 
 `run.bat` calls `run.ps1`, which uses `runtime\python\python.exe` (bundled), checks dependencies, and starts the server at **http://127.0.0.1:8765**.
 
-## Run on Linux
+## Run on Linux (Mint / Ubuntu)
 
-Linux support is available via `nmcli` (NetworkManager).
+**Use `./run.sh`.**  
+`.bat` and `.ps1` are Windows-only. Linux opens them as text on purpose.
 
-Requirements:
-- Python 3.10+
-- NetworkManager / `nmcli` (`network-manager` package)
-- Optional: `python3-venv` (recommended, but not required)
+The Windows folder `runtime/python` is a Windows-only portable Python. Linux uses the system `python3` plus a local dependency folder created on first run (`.venv-linux` or `.pyuser`). That first install is expected and does **not** need `sudo` if `python3` and `nmcli` are already present (they usually are on Mint Live).
 
-Ubuntu / Mint:
+Internet is required **once**, so `./run.sh` can download Python packages into the project folder. Later starts reuse those files and do not reinstall.
 
-```bash
-sudo apt update
-sudo apt install -y python3 python3-venv network-manager
-```
-
-Start (terminal mode):
+From the extracted ZIP or git clone:
 
 ```bash
-git clone https://github.com/mrproductionexpert-dot/AIRSPACE-SCANNER.git
-cd AIRSPACE-SCANNER
+cd ~/Downloads/AIRSPACE-SCANNER-main
 chmod +x run.sh
 ./run.sh
 ```
 
-Open **http://127.0.0.1:8765**
+Then open **http://127.0.0.1:8765**
 
-If your live session says `python3-venv` is missing, `run.sh` now falls back to a project-local Python user base (`.pyuser`) and still runs without sudo.  
-If `pip` is missing, launcher auto-bootstraps it (via `ensurepip` or `get-pip.py`) before installing dependencies.
-
-### Linux GUI launch (no terminal window)
-
-One-time launcher install:
+Optional GUI launcher (only after `./run.sh` has succeeded once):
 
 ```bash
-chmod +x scripts/install_linux_launcher.sh run.sh run-linux-gui.sh
+chmod +x run-linux-gui.sh scripts/install_linux_launcher.sh
+./run-linux-gui.sh
+```
+
+Or install a menu entry:
+
+```bash
 ./scripts/install_linux_launcher.sh
 ```
 
-Then open app menu and run **AIRSPACE Scanner**.
-
-Direct GUI start without installing menu entry:
-
-```bash
-chmod +x run-linux-gui.sh
-./run-linux-gui.sh
-```
+Then search the app menu for **AIRSPACE Scanner**.
 
 1. Select your USB Wi-Fi adapter in the dropdown (Realtek / WNP-UA1300-style adapters are auto-preferred when detected).
 2. Or enable **Simulation** to demo drones / V380 / ESP-CAM / Hikvision-style blips immediately.
