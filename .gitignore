@@ -1,7 +1,9 @@
-# Local environments / caches — never publish
+# Local system Python venv (portable runtime is committed under runtime/python)
 .venv/
 venv/
 env/
+
+# Caches / bytecode
 __pycache__/
 *.py[cod]
 *$py.class
@@ -29,3 +31,8 @@ captures/
 logs/
 data/
 *.csv
+
+# Pip / bootstrap leftovers under runtime (keep the python tree)
+runtime/get-pip.py
+runtime/python-embed.zip
+runtime/python/Lib/site-packages/pip/_internal/commands/wheel/__pycache__/

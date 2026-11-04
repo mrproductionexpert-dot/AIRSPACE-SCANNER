@@ -10,8 +10,8 @@ Repository: [github.com/mrproductionexpert-dot/AIRSPACE-SCANNER](https://github.
 
 ## What you need
 
-1. Windows 10/11 PC
-2. Python 3.10+ on PATH ([python.org](https://www.python.org/downloads/) — enable **Add python.exe to PATH**)
+1. **Windows 10/11, 64-bit**
+2. This repository (includes a **portable Python 3.12** under `runtime/python` — no system Python install required)
 3. Optional: a USB Wi-Fi adapter for dedicated airspace sweeps
 4. **Windows Location services ON** for *live* Wi-Fi scans (Microsoft requirement):
    - Open `ms-settings:privacy-location`
@@ -20,7 +20,7 @@ Repository: [github.com/mrproductionexpert-dot/AIRSPACE-SCANNER](https://github.
 
 **Simulation Mode** works with zero hardware and does **not** need Location.
 
-## Quick start (portable)
+## Quick start (fully portable)
 
 ```bat
 git clone https://github.com/mrproductionexpert-dot/AIRSPACE-SCANNER.git
@@ -28,20 +28,9 @@ cd AIRSPACE-SCANNER
 run.bat
 ```
 
-Or copy this folder to a USB flash drive, plug it into any Windows PC with Python installed, and double-click `run.bat`.
+Or copy the whole folder (including `runtime\`) to a USB flash drive, plug it into any **64-bit Windows** PC, and double-click `run.bat`.
 
-`run.bat` creates a local `.venv`, installs dependencies, starts the server, and opens the UI.
-
-Manual:
-
-```bat
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python -m app.main
-```
-
-Open **http://127.0.0.1:8765**
+`run.bat` uses `runtime\python\python.exe` (bundled), checks dependencies, starts the server, and opens the UI at **http://127.0.0.1:8765**.
 
 1. Select your USB Wi-Fi adapter in the dropdown (Realtek / WNP-UA1300-style adapters are auto-preferred when detected).
 2. Or enable **Simulation** to demo drones / V380 / ESP-CAM / Hikvision-style blips immediately.
@@ -59,24 +48,20 @@ Open **http://127.0.0.1:8765**
 ## Project layout
 
 ```
-app/
-  main.py           FastAPI + WebSocket telemetry
-  wlan_win32.py     Windows Native Wi-Fi scanner
-  signatures.py     Camera / drone intelligence DB
-  network_probe.py  ARP / ports / traffic bursts
-  classifier.py     Scoring, RSSI smoother, simulation
+runtime/python/     Portable CPython 3.12 (Windows x64) + app dependencies
+app/                Scanner backend
 static/             Radar UI, Geiger audio, waterfall
-scripts/            Optional smoke test against a running server
-run.bat             One-click launcher
+scripts/            Smoke test + portable Python rebuild script
+run.bat             One-click launcher (uses bundled Python)
 requirements.txt    Python dependencies
 ```
 
 ## Notes & limits (honest)
 
+- Bundled runtime is **Windows amd64 only**. It will not run on 32-bit Windows or macOS/Linux.
 - Windows managed-mode BSS scans show **beaconing APs / soft-APs** (SSID, BSSID, RSSI, channel). They do **not** capture raw encrypted data-frame bursts from stations the way Linux monitor mode does.
-- A dedicated USB adapter + Simulation Mode still give a practical anti-spy workflow: find camera setup APs, drone soft-APs, strong 5.8 GHz video channels, and LAN RTSP endpoints, then Geiger-walk to the hottest RSSI.
 - Use only on networks and premises you own or are authorized to audit.
-- Do not commit local `.venv`, scan captures, or logs — they are gitignored and may contain nearby network identifiers from *your* environment.
+- Do not commit scan captures or logs — they are gitignored and may contain nearby network identifiers from *your* environment.
 
 ## License
 
